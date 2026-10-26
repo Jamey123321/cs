@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>信息流编导爆款拆解工作台</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #1e1b4b; }
+        ::-webkit-scrollbar-thumb { background: #4338ca; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #6366f1; }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans min-h-screen flex flex-col selection:bg-indigo-500 selection:text-white">
+
+    <!-- 顶部导航栏 -->
+    <header class="bg-slate-900/80 backdrop-blur-md border-b border-indigo-900/50 sticky top-0 z-50 px-6 py-3 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+            <div class="bg-gradient-to-tr from-indigo-600 to-violet-500 p-2.5 rounded-xl shadow-lg shadow-indigo-500/20">
+                <i data-lucide="clapperboard" class="w-6 h-6 text-white"></i>
+            </div>
+            <div>
+                <h1 class="text-lg font-bold bg-gradient-to-r from-white via-indigo-200 to-indigo-400 bg-clip-text text-transparent">信息流编导爆款拆解工作台</h1>
+                <p class="text-xs text-indigo-400/80 font-medium">Viral Video Breakdown Workspace & Strategy Hub</p>
+            </div>
+        </div>
+        
+        <div class="flex items-center space-x-3">
+            <div id="syncStatus" class="text-xs text-emerald-400 bg-emerald-950/60 border border-emerald-800/50 px-3 py-1.5 rounded-full flex items-center shadow-inner">
+                <span class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse mr-2"></span>
+                LocalStorage 已同步
+            </div>
+            <button onclick="exportMarkdown()" class="bg-slate-800 hover:bg-slate-700 text-indigo-300 hover:text-white border border-indigo-500/30 px-3.5 py-2 rounded-xl text-xs font-medium flex items-center transition shadow-sm">
+                <i data-lucide="file-text" class="w-4 h-4 mr-1.5"></i> 导出 MD
+            </button>
+            <div class="relative group">
+                <button class="bg-slate-800 hover:bg-slate-700 text-indigo-300 hover:text-white border border-indigo-500/30 px-3.5 py-2 rounded-xl text-xs font-medium flex items-center transition shadow-sm">
+                    <i data-lucide="database" class="w-4 h-4 mr-1.5"></i> 数据备份 <i data-lucide="chevron-down" class="w-3.5 h-3.5 ml-1"></i>
+                </button>
+                <div class="absolute right-0 mt-1 w-36 bg-slate-900 border border-indigo-900/60 rounded-xl shadow-xl hidden group-hover:block z-50 overflow-hidden py-1">
+                    <button onclick="exportJSON()" class="w-full text-left px-3.5 py-2 text-xs text-slate-300 hover:bg-indigo-600 hover:text-white flex items-center transition"><i data-lucide="download" class="w-3.5 h-3.5 mr-2"></i> 导出 JSON</button>
+                    <label class="w-full text-left px-3.5 py-2 text-xs text-slate-300 hover:bg-indigo-600 hover:text-white flex items-center transition cursor-pointer">
+                        <i data-lucide="upload" class="w-3.5 h-3.5 mr-2"></i> 导入 JSON
+                        <input type="file" id="importFile" accept=".json" class="hidden" onchange="importJSON(event)">
+                    </label>
+                </div>
+            </div>
+            <button onclick="createNewItem()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-xl text-xs font-semibold flex items-center shadow-lg shadow-indigo-600/30 transition transform active:scale-95">
+                <i data-lucide="plus" class="w-4 h-4 mr-1.5"></i> 新建拆解
+            </button>
+        </div>
+    </header>
+
+    <!-- 主体双栏布局 -->
+    <main class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 p-6 max-w-[1700px] w-full mx-auto">
+        
+        <!-- 左侧：播放器与过滤导航区 (4列) -->
+        <section class="lg:col-span-4 flex flex-col space-y-5">
+            
+            <!-- 视频播放与本地上传模块 -->
+            <div class="bg-slate-900/90 border border-indigo-900/40 rounded-2xl p-4 shadow-xl backdrop-blur-sm">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-xs font-semibold text-indigo-300 flex items-center">
+                        <i data-lucide="video" class="w-4 h-4 mr-1.5 text-indigo-400"></i> 视频端与本地预览
+                    </span>
+                    <span class="text-[10px] bg-indigo-950 text-indigo-400 px-2 py-0.5 rounded border border-indigo-800/40">支持MP4/WebM</span>
+                </div>
+                
+                <!-- 本地视频上传框 -->
+                <div class="mb-3">
+                    <label for="localVideoInput" class="w-full bg-indigo-950/40 hover:bg-indigo-900/40 border border-dashed border-indigo-600/40 hover:border-indigo-500 rounded-xl p-3 flex flex-col items-center justify-center cursor-pointer transition group">
+                        <i data-lucide="upload-cloud" class="w-6 h-6 text-indigo-400 group-hover:scale-110 transition mb-1"></i>
+                        <span class="text-xs text-indigo-200 font-medium">点击或拖拽上传本地视频文件</span>
+                        <span class="text-[10px] text-slate-400 mt-0.5">解决抖音/西瓜网页内嵌拦截问题</span>
+                        <input type="file" id="localVideoInput" accept="video/*" class="hidden" onchange="handleVideoUpload(event)">
+                    </label>
+                </div>
+
+                <!-- 视频播放器容器 -->
+                <div class="relative w-full aspect-[9/16] bg-black rounded-xl overflow-hidden shadow-inner border border-indigo-950 flex items-center justify-center group">
+                    <video id="videoPlayer" controls class="w-full h-full object-contain hidden"></video>
+                    <div id="videoPlaceholder" class="absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
+                        <div class="w-12 h-12 rounded-full bg-indigo-950/80 border border-indigo-800/60 flex items-center justify-center mb-3 text-indigo-400 shadow-lg">
+                            <i data-lucide="film" class="w-6 h-6"></i>
+                        </div>
+                        <p class="text-xs text-slate-300 font-medium mb-1">尚未加载视频</p>
+                        <p class="text-[11px] text-slate-500">请上传本地视频文件或在右侧填入链接进行对照</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 搜索与筛选模块 -->
+            <div class="bg-slate-900/90 border border-indigo-900/40 rounded-2xl p-4 shadow-xl backdrop-blur-sm space-y-3">
+                <div class="relative">
+                    <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-2.5"></i>
+                    <input type="text" id="searchInput" oninput="filterList()" placeholder="搜索标题或账号..." class="w-full bg-slate-950 border border-indigo-950 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition">
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <select id="filterPlatform" onchange="filterList()" class="bg-slate-950 border border-indigo-950 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-indigo-500">
+                        <option value="">全部平台</option>
+                        <option value="抖音">抖音</option>
+                        <option value="小红书">小红书</option>
+                        <option value="视频号">视频号</option>
+                        <option value="快手">快手</option>
+                    </select>
+                    <select id="filterTrack" onchange="filterList()" class="bg-slate-950 border border-indigo-950 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-indigo-500">
+                        <option value="">全部赛道</option>
+                        <option value="知识科普">知识科普</option>
+                        <option value="剧情反转">剧情反转</option>
+                        <option value="生活Vlog">生活Vlog</option>
+                        <option value="测评种草">测评种草</option>
+                        <option value="职场干货">职场干货</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- 历史拆解列表 -->
+            <div class="bg-slate-900/90 border border-indigo-900/40 rounded-2xl p-4 shadow-xl backdrop-blur-sm flex-1 flex flex-col min-h-[300px]">
+                <div class="flex items-center justify-between mb-3 pb-2 border-b border-indigo-950">
+                    <span class="text-xs font-semibold text-indigo-300 flex items-center">
+                        <i data-lucide="folder-kanban" class="w-4 h-4 mr-1.5 text-indigo-400"></i> 历史拆解沉淀
+                    </span>
+                    <span id="recordCount" class="text-[10px] bg-indigo-950 text-indigo-400 px-2 py-0.5 rounded-full border border-indigo-800/40">0 条记录</span>
+                </div>
+                <div id="breakdownList" class="flex-1 overflow-y-auto space-y-2 pr-1 max-h-[360px]">
+                    <!-- 动态生成列表 -->
+                </div>
+            </div>
+        </section>
+
+        <!-- 右侧：结构化拆解录入表单区 (8列) -->
+        <section class="lg:col-span-8 bg-slate-900/90 border border-indigo-900/40 rounded-2xl p-6 shadow-xl backdrop-blur-sm flex flex-col justify-between">
+            
+            <div class="space-y-6">
+                <!-- 表单头部 -->
+                <div class="flex items-center justify-between pb-4 border-b border-indigo-950">
+                    <div>
+                        <h2 class="text-sm font-bold text-white flex items-center">
+                            <i data-lucide="layout-template" class="w-4 h-4 mr-2 text-indigo-400"></i> 爆款复盘拆解表单
+                        </h2>
+                        <p class="text-[11px] text-slate-400 mt-0.5">全链路打通：吸睛 $\rightarrow$ 共鸣 $\rightarrow$ 解决方案 $\rightarrow$ 逼单转化</p>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <button onclick="saveCurrentItem()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-1.5 rounded-xl text-xs font-medium flex items-center transition shadow-md shadow-indigo-600/20">
+                            <i data-lucide="save" class="w-3.5 h-3.5 mr-1.5"></i> 保存修改
+                        </button>
+                        <button onclick="deleteCurrentItem()" class="bg-rose-950/60 hover:bg-rose-900/60 text-rose-300 border border-rose-800/50 px-3 py-1.5 rounded-xl text-xs font-medium flex items-center transition">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5 mr-1"></i> 删除
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 1. 基础信息与数据指标 -->
+                <div class="space-y-3">
+                    <h3 class="text-xs font-bold text-indigo-300 uppercase tracking-wider flex items-center">
+                        <span class="w-5 h-5 rounded-lg bg-indigo-950 text-indigo-400 flex items-center justify-center text-[10px] mr-1.5 border border-indigo-800/40">1</span> 基础信息与数据指标
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[11px] text-slate-400 mb-1">视频标题 *</label>
+                            <input type="text" id="field_title" placeholder="例如：3年涨粉50万：信息流编导必须掌握的爆款结构" class="w-full bg-slate-950 border border-indigo-950 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] text-slate-400 mb-1">发布平台</label>
+                            <select id="field_platform" class="w-full bg-slate-950 border border-indigo-950 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-indigo-500">
+                                <option value="抖音">抖音</option>
+                                <option value="小红书">小红书</option>
+                                <option value="视频号">视频号</option>
+                                <option value="快手">快手</option>
+                                <option value="B站">B站</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] text-slate-400 mb-1">赛道标签</label>
+                            <select id="field_track" class="w-full bg-slate-950 border border-indigo-950 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-indigo-500">
+                                <option value="知识科普">知识科普</option>
+                                <option value="剧情反转">剧情反转</option>
+                                <option value="生活Vlog">生活Vlog</option>
+                                <option value="测评种草">测评种草</option>
+                                <option value="职场干货">职场干货</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] text-slate-400 mb-1">内容形式</label>
+                            <select id="field_form" class="w-full bg-slate-950 border border-indigo-950 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-indigo-500">
+                                <option value="真人口播">真人口播</option>
+                                <option value="情景短剧">情景短剧</option>
+                                <option value="产品混剪">产品混剪</option>
+                                <option value="图文配音">图文配音</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] text-slate-400 mb-1">发布账号</label>
+                            <input type="text" id="field_author" placeholder="例如：编导老张" class="w-full bg-slate-950 border border-indigo-950 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] text-slate-400 mb-1">点赞量 / 热度</label>
+                            <input type="text" id="field_likes" placeholder="例如：12.5W" class="w-full bg-slate-950 border border-indigo-950 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] text-slate-400 mb-1">转发 / 收藏量</label>
+                            <input type="text" id="field_shares" placeholder="例如：4.2W" class="w-full bg-slate-950 border border-indigo-950 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] text-slate-400 mb-1">转化目标</label>
+                            <input type="text" id="field_goal" placeholder="例如：涨粉与私域转化" class="w-full bg-slate-950 border border-indigo-950 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. 核心拆解区 (Hook + 痛点 + 解决方案 + 逼单转化) -->
+                <div class="space-y-4 pt-2">
+                    <h3 class="text-xs font-bold text-indigo-300 uppercase tracking-wider flex items-center">
+                        <span class="w-5 h-5 rounded-lg bg-indigo-950 text-indigo-400 flex items-center justify-center text-[10px] mr-1.5 border border-indigo-800/40">2</span> 核心策略闭环拆解区 (Hook / 痛点 / 卖点 / 逼单)
+                    </h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <!-- 黄金三秒 -->
+                        <div class="bg-indigo-950/20 border border-indigo-900/30 rounded-xl p-3 space-y-2">
+                            <span class="text-[11px] font-semibold text-indigo-300 flex items-center"><i data-lucide="zap" class="w-3.5 h-3.5 mr-1 text-amber-400"></i> ① 黄金三秒 (Hook)</span>
+                            <div>
+                                <label class="block text-[10px] text-slate-400 mb-1">视觉与痛点点题 (画面表现)</label>
+                                <textarea id="field_hook_visual" rows="2" placeholder="特写黑板圈免费险，突然切入高频投喂节奏运势" class="w-full bg-slate-950 border border-indigo-950 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"></textarea>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] text-slate-400 mb-1">文案切入方式与原话</label>
+                                <textarea id="field_hook_copy" rows="2" placeholder="你是不是每次熬夜写脚本，播放量还是只有300？" class="w-full bg-slate-950 border border-indigo-950 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"></textarea>
+                            </div>
+                        </div>
+
+                        <!-- 用户痛点模块 (新增) -->
+                        <div class="bg-indigo-950/20 border border-indigo-900/30 rounded-xl p-3 space-y-2">
+                            <span class="text-[11px] font-semibold text-indigo-300 flex items-center"><i data-lucide="target" class="w-3.5 h-3.5 mr-1 text-rose-400"></i> ② 用户痛点 (Pain Point)</span>
+                            <div>
+                                <label class="block text-[10px] text-slate-400 mb-1">痛点场景与类型</label>
+                                <input type="text" id="field_pain_scene" placeholder="例如：深夜加班焦虑、职场创作瓶颈" class="w-full bg-slate-950 border border-indigo-950 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 mb-1">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] text-slate-400 mb-1">触发金句与共鸣机制</label>
+                                <textarea id="field_pain_quote" rows="2" placeholder="精准戳中编导‘写了没人看’的底层焦虑" class="w-full bg-slate-950 border border-indigo-950 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"></textarea>
+                            </div>
+                        </div>
+
+                        <!-- 解决方案与核心卖点 (新增) -->
+                        <div class="bg-indigo-950/20 border border-indigo-900/30 rounded-xl p-3 space-y-2">
+                            <span class="text-[11px] font-semibold text-indigo-300 flex items-center"><i data-lucide="shield-check" class="w-3.5 h-3.5 mr-1 text-emerald-400"></i> ③ 解决方案与核心卖点</span>
+                            <div>
+                                <label class="block text-[10px] text-slate-400 mb-1">解法路径与核心卖点</label>
+                                <input type="text" id="field_solution_path" placeholder="例如：给出3步爆款公式，独家思维模型" class="w-full bg-slate-950 border border-indigo-950 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 mb-1">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] text-slate-400 mb-1">卖点包装方式 (大白话/具象化)</label>
+                                <textarea id="field_solution_wrap" rows="2" placeholder="将枯燥参数转化为‘像搭积木一样写脚本’" class="w-full bg-slate-950 border border-indigo-950 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"></textarea>
+                            </div>
+                        </div>
+
+                        <!-- 逼单阶段转化方式 (新增) -->
+                        <div class="bg-indigo-950/20 border border-indigo-900/30 rounded-xl p-3 space-y-2">
+                            <span class="text-[11px] font-semibold text-indigo-300 flex items-center"><i data-lucide="badge-percent" class="w-3.5 h-3.5 mr-1 text-violet-400"></i> ④ 逼单阶段转化方式</span>
+                            <div>
+                                <label class="block text-[10px] text-slate-400 mb-1">转化钩子 (福利 / 稀缺性)</label>
+                                <input type="text" id="field_cta_hook" placeholder="例如：前100名免费领拆解模板" class="w-full bg-slate-950 border border-indigo-950 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 mb-1">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] text-slate-400 mb-1">紧迫感制造与行动指令 (CTA)</label>
+                                <textarea id="field_cta_action" rows="2" placeholder="错过拍大腿，主页戳我一键获取" class="w-full bg-slate-950 border border-indigo-950 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. 视听叙事与分镜头时间轴 -->
+                <div class="space-y-3 pt-2">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-xs font-bold text-indigo-300 uppercase tracking-wider flex items-center">
+                            <span class="w-5 h-5 rounded-lg bg-indigo-950 text-indigo-400 flex items-center justify-center text-[10px] mr-1.5 border border-indigo-800/40">3</span> 视听叙事与动态分镜头时间轴
+                        </h3>
+                        <button onclick="addTimelineRow()" class="bg-indigo-950 hover:bg-indigo-900 text-indigo-300 border border-indigo-800/50 px-2.5 py-1 rounded-lg text-[11px] font-medium flex items-center transition">
+                            <i data-lucide="plus" class="w-3 h-3 mr-1"></i> 增加分镜
+                        </button>
+                    </div>
+                    
+                    <div class="overflow-x-auto border border-indigo-950 rounded-xl bg-slate-950/60">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead>
+                                <tr class="border-b border-indigo-900/40 text-indigo-400 bg-indigo-950/30">
+                                    <th class="p-2.5 w-24">时间戳</th>
+                                    <th class="p-2.5">画面 / 运镜 / 景别</th>
+                                    <th class="p-2.5">声音 / 台词 / 音效</th>
+                                    <th class="p-2.5">心流与编导意图</th>
+                                    <th class="p-2.5 w-12 text-center">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="timelineTableBody">
+                                <!-- 动态插入行 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 4. 方法论沉淀与公式 -->
+                <div class="space-y-3 pt-2">
+                    <h3 class="text-xs font-bold text-indigo-300 uppercase tracking-wider flex items-center">
+                        <span class="w-5 h-5 rounded-lg bg-indigo-950 text-indigo-400 flex items-center justify-center text-[10px] mr-1.5 border border-indigo-800/40">4</span> 方法论沉淀与可复用公式
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[11px] text-slate-400 mb-1">爆款基因总结 (为什么能火？)</label>
+                            <textarea id="field_takeaway_gene" rows="3" placeholder="情绪共鸣到位、干货密度极高、反转丝滑" class="w-full bg-slate-950 border border-indigo-950 rounded-xl p-2.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] text-slate-400 mb-1">可复用万能创作公式</label>
+                            <textarea id="field_takeaway_formula" rows="3" placeholder="公式 = [极端痛点反问] + [干货拆解] + [福利逼单]" class="w-full bg-slate-950 border border-indigo-950 rounded-xl p-2.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- 底部提交/状态提示 -->
+            <div class="mt-8 pt-4 border-t border-indigo-950 flex items-center justify-between text-xs text-slate-500">
+                <span>提示：点击“保存修改”将实时同步至浏览器本地缓存。</span>
+                <button onclick="saveCurrentItem()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2 rounded-xl font-medium shadow-md shadow-indigo-600/20 transition">保存当前拆解</button>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- JavaScript 交互核心逻辑 -->
+    <script>
+        let breakdowns = JSON.parse(localStorage.getItem('director_breakdowns') || '[]');
+        let currentId = null;
+
+        // 初始化加载
+        window.onload = function() {
+            if (breakdowns.length === 0) {
+                // 初始化一条示例数据
+                const sample = {
+                    id: Date.now(),
+                    title: '3年涨粉50万：信息流编导必须掌握的爆款结构',
+                    platform: '抖音',
+                    track: '知识科普',
+                    form: '真人口播',
+                    author: '编导老张',
+                    likes: '12.5W',
+                    shares: '4.2W',
+                    goal: '涨粉与私域转化',
+                    hookVisual: '特写黑板圈免费险，突然切入高频投喂节奏运势',
+                    hookCopy: '你是不是每次熬夜写脚本，播放量还是只有300？',
+                    painScene: '深夜加班焦虑、职场创作瓶颈',
+                    painQuote: '精准戳中编导‘写了没人看’的底层焦虑',
+                    solutionPath: '给出3步爆款公式，独家思维模型',
+                    solutionWrap: '将枯燥参数转化为‘像搭积木一样写脚本’',
+                    ctaHook: '前100名免费领拆解模板',
+                    ctaAction: '错过拍大腿，主页戳我一键获取',
+                    timeline: [
+                        { time: '00:00-00:03', visual: '特写反差镜头', sound: '‘播放量只有300？’', intent: '3秒瞬间抓住痛点' },
+                        { time: '00:03-00:15', visual: '白板图表推拉', sound: '核心结构拆解说明', intent: '输出高密度干货拉时长' }
+                    ],
+                    takeawayGene: '情绪共鸣到位、干货密度极高、反转丝滑',
+                    takeawayFormula: '公式 = [极端痛点反问] + [干货拆解] + [福利逼单]'
+                };
+                breakdowns.push(sample);
+                saveToStorage();
+            }
+            currentId = breakdowns[0].id;
+            renderList();
+            loadItemToForm(currentId);
+            lucide.createIcons();
+        };
+
+        function saveToStorage() {
+            localStorage.setItem('director_breakdowns', JSON.stringify(breakdowns));
+            showSyncStatus();
+        }
+
+        function showSyncStatus() {
+            const el = document.getElementById('syncStatus');
+            el.classList.add('scale-105');
+            setTimeout(() => el.classList.remove('scale-105'), 300);
+        }
+
+        // 视频本地上传播放处理
+        function handleVideoUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const videoURL = URL.createObjectURL(file);
+                const player = document.getElementById('videoPlayer');
+                const placeholder = document.getElementById('videoPlaceholder');
+                
+                player.src = videoURL;
+                player.classList.remove('hidden');
+                placeholder.classList.add('hidden');
+                player.load();
+            }
+        }
+
+        // 渲染左侧列表
+        function renderList(filteredData = null) {
+            const listEl = document.getElementById('breakdownList');
+            const data = filteredData || breakdowns;
+            document.getElementById('recordCount').innerText = `${data.length} 条记录`;
+            
+            listEl.innerHTML = '';
+            if (data.length === 0) {
+                listEl.innerHTML = `<div class="text-center py-8 text-slate-500 text-xs">没有找到相关拆解记录</div>`;
+                return;
+            }
+
+            data.forEach(item => {
+                const isActive = item.id === currentId;
+                const div = document.createElement('div');
+                div.className = `p-3 rounded-xl cursor-pointer transition border ${isActive ? 'bg-indigo-950/60 border-indigo-600/60 shadow-md shadow-indigo-950' : 'bg-slate-950/40 border-indigo-950 hover:border-indigo-800/60'}`;
+                div.onclick = () => {
+                    currentId = item.id;
+                    loadItemToForm(currentId);
+                    renderList();
+                };
+                div.innerHTML = `
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-[10px] bg-indigo-900/50 text-indigo-300 px-2 py-0.5 rounded border border-indigo-700/40 font-medium">${item.platform || '平台'}</span>
+                        <span class="text-[10px] text-slate-400 font-medium">${item.likes || '0W'} 点赞</span>
+                    </div>
+                    <h4 class="text-xs font-semibold text-slate-200 line-clamp-1 mb-1">${item.title || '未命名拆解'}</h4>
+                    <div class="flex items-center justify-between text-[10px] text-slate-400">
+                        <span>${item.track || '赛道'}</span>
+                        <span>${item.author || '编导'}</span>
+                    </div>
+                `;
+                listEl.appendChild(div);
+            });
+        }
+
+        // 过滤检索
+        function filterList() {
+            const keyword = document.getElementById('searchInput').value.toLowerCase();
+            const platform = document.getElementById('filterPlatform').value;
+            const track = document.getElementById('filterTrack').value;
+
+            const filtered = breakdowns.filter(item => {
+                const matchKeyword = (item.title || '').toLowerCase().includes(keyword) || (item.author || '').toLowerCase().includes(keyword);
+                const matchPlatform = platform === '' || item.platform === platform;
+                const matchTrack = track === '' || item.track === track;
+                return matchKeyword && matchPlatform && matchTrack;
+            });
+            renderList(filtered);
+        }
+
+        // 加载详情到表单
+        function loadItemToForm(id) {
+            const item = breakdowns.find(b => b.id === id);
+            if (!item) return;
+
+            document.getElementById('field_title').value = item.title || '';
+            document.getElementById('field_platform').value = item.platform || '抖音';
+            document.getElementById('field_track').value = item.track || '知识科普';
+            document.getElementById('field_form').value = item.form || '真人口播';
+            document.getElementById('field_author').value = item.author || '';
+            document.getElementById('field_likes').value = item.likes || '';
+            document.getElementById('field_shares').value = item.shares || '';
+            document.getElementById('field_goal').value = item.goal || '';
+            
+            document.getElementById('field_hook_visual').value = item.hookVisual || '';
+            document.getElementById('field_hook_copy').value = item.hookCopy || '';
+            document.getElementById('field_pain_scene').value = item.painScene || '';
+            document.getElementById('field_pain_quote').value = item.painQuote || '';
+            document.getElementById('field_solution_path').value = item.solutionPath || '';
+            document.getElementById('field_solution_wrap').value = item.solutionWrap || '';
+            document.getElementById('field_cta_hook').value = item.ctaHook || '';
+            document.getElementById('field_cta_action').value = item.ctaAction || '';
+
+            document.getElementById('field_takeaway_gene').value = item.takeawayGene || '';
+            document.getElementById('field_takeaway_formula').value = item.takeawayFormula || '';
+
+            renderTimeline(item.timeline || []);
+        }
+
+        // 渲染分镜头表格
+        function renderTimeline(timelineArray) {
+            const tbody = document.getElementById('timelineTableBody');
+            tbody.innerHTML = '';
+            
+            timelineArray.forEach((row, index) => {
+                const tr = document.createElement('tr');
+                tr.className = 'border-b border-indigo-950 hover:bg-indigo-950/20 transition';
+                tr.innerHTML = `
+                    <td class="p-2"><input type="text" value="${row.time || ''}" class="tl-time w-full bg-slate-900 border border-indigo-950 rounded px-2 py-1 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"></td>
+                    <td class="p-2"><input type="text" value="${row.visual || ''}" class="tl-visual w-full bg-slate-900 border border-indigo-950 rounded px-2 py-1 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"></td>
+                    <td class="p-2"><input type="text" value="${row.sound || ''}" class="tl-sound w-full bg-slate-900 border border-indigo-950 rounded px-2 py-1 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"></td>
+                    <td class="p-2"><input type="text" value="${row.intent || ''}" class="tl-intent w-full bg-slate-900 border border-indigo-950 rounded px-2 py-1 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"></td>
+                    <td class="p-2 text-center"><button onclick="removeTimelineRow(this)" class="text-rose-400 hover:text-rose-300 p-1"><i data-lucide="x" class="w-3.5 h-3.5"></i></button></td>
+                `;
+                tbody.appendChild(tr);
+            });
+            lucide.createIcons();
+        }
+
+        function addTimelineRow() {
+            const tbody = document.getElementById('timelineTableBody');
+            const tr = document.createElement('tr');
+            tr.className = 'border-b border-indigo-950 hover:bg-indigo-950/20 transition';
+            tr.innerHTML = `
+                <td class="p-2"><input type="text" placeholder="00:00-00:03" class="tl-time w-full bg-slate-900 border border-indigo-950 rounded px-2 py-1 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"></td>
+                <td class="p-2"><input type="text" placeholder="画面/运镜" class="tl-visual w-full bg-slate-900 border border-indigo-950 rounded px-2 py-1 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"></td>
+                <td class="p-2"><input type="text" placeholder="声音/台词" class="tl-sound w-full bg-slate-900 border border-indigo-950 rounded px-2 py-1 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"></td>
+                <td class="p-2"><input type="text" placeholder="编导心流意图" class="tl-intent w-full bg-slate-900 border border-indigo-950 rounded px-2 py-1 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"></td>
+                <td class="p-2 text-center"><button onclick="removeTimelineRow(this)" class="text-rose-400 hover:text-rose-300 p-1"><i data-lucide="x" class="w-3.5 h-3.5"></i></button></td>
+            `;
+            tbody.appendChild(tr);
+            lucide.createIcons();
+        }
+
+        function removeTimelineRow(btn) {
+            const tr = btn.closest('tr');
+            tr.remove();
+        }
+
+        // 收集分镜头数据
+        function getTimelineData() {
+            const rows = document.querySelectorAll('#timelineTableBody tr');
+            const timeline = [];
+            rows.forEach(tr => {
+                timeline.push({
+                    time: tr.querySelector('.tl-time').value,
+                    visual: tr.querySelector('.tl-visual').value,
+                    sound: tr.querySelector('.tl-sound').value,
+                    intent: tr.querySelector('.tl-intent').value
+                });
+            });
+            return timeline;
+        }
+
+        // 保存当前项
+        function saveCurrentItem() {
+            const index = breakdowns.findIndex(b => b.id === currentId);
+            if (index === -1) return;
+
+            breakdowns[index] = {
+                id: currentId,
+                title: document.getElementById('field_title').value,
+                platform: document.getElementById('field_platform').value,
+                track: document.getElementById('field_track').value,
+                form: document.getElementById('field_form').value,
+                author: document.getElementById('field_author').value,
+                likes: document.getElementById('field_likes').value,
+                shares: document.getElementById('field_shares').value,
+                goal: document.getElementById('field_goal').value,
+                hookVisual: document.getElementById('field_hook_visual').value,
+                hookCopy: document.getElementById('field_hook_copy').value,
+                painScene: document.getElementById('field_pain_scene').value,
+                painQuote: document.getElementById('field_pain_quote').value,
+                solutionPath: document.getElementById('field_solution_path').value,
+                solutionWrap: document.getElementById('field_solution_wrap').value,
+                ctaHook: document.getElementById('field_cta_hook').value,
+                ctaAction: document.getElementById('field_cta_action').value,
+                timeline: getTimelineData(),
+                takeawayGene: document.getElementById('field_takeaway_gene').value,
+                takeawayFormula: document.getElementById('field_takeaway_formula').value
+            };
+
+            saveToStorage();
+            renderList();
+        }
+
+        // 新建拆解
+        function createNewItem() {
+            const newItem = {
+                id: Date.now(),
+                title: '未命名爆款拆解视频',
+                platform: '抖音',
+                track: '知识科普',
+                form: '真人口播',
+                author: '编导',
+                likes: '1W+',
+                shares: '1000+',
+                goal: '涨粉',
+                hookVisual: '',
+                hookCopy: '',
+                painScene: '',
+                painQuote: '',
+                solutionPath: '',
+                solutionWrap: '',
+                ctaHook: '',
+                ctaAction: '',
+                timeline: [],
+                takeawayGene: '',
+                takeawayFormula: ''
+            };
+            breakdowns.unshift(newItem);
+            currentId = newItem.id;
+            saveToStorage();
+            renderList();
+            loadItemToForm(currentId);
+        }
+
+        // 删除当前项
+        function deleteCurrentItem() {
+            if (breakdowns.length <= 1) {
+                alert('请至少保留一条拆解记录！');
+                return;
+            }
+            if (confirm('确定要删除这条拆解记录吗？')) {
+                breakdowns = breakdowns.filter(b => b.id !== currentId);
+                currentId = breakdowns[0].id;
+                saveToStorage();
+                renderList();
+                loadItemToForm(currentId);
+            }
+        }
+
+        // 导出 JSON
+        function exportJSON() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(breakdowns, null, 2));
+            const dlAnchor = document.createElement('a');
+            dlAnchor.setAttribute("href", dataStr);
+            dlAnchor.setAttribute("download", `breakdowns_backup_${new Date().toISOString().slice(0,10)}.json`);
+            document.body.appendChild(dlAnchor);
+            dlAnchor.click();
+            dlAnchor.remove();
+        }
+
+        // 导入 JSON
+        function importJSON(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (Array.isArray(imported)) {
+                        breakdowns = imported;
+                        currentId = breakdowns[0].id;
+                        saveToStorage();
+                        renderList();
+                        loadItemToForm(currentId);
+                        alert('数据导入成功！');
+                    }
+                } catch(err) {
+                    alert('导入失败，JSON格式不正确！');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // 导出 Markdown 复盘报告
+        function exportMarkdown() {
+            const item = breakdowns.find(b => b.id === currentId);
+            if (!item) return;
+
+            let md = `# 🎬 爆款视频拆解复盘报告\n\n`;
+            md += `## 1. 基础信息\n`;
+            md += `- **视频标题**: ${item.title}\n`;
+            md += `- **发布平台**: ${item.platform} | **赛道**: ${item.track} | **形式**: ${item.form}\n`;
+            md += `- **发布账号**: ${item.author} | **点赞热度**: ${item.likes} | **转发收藏**: ${item.shares}\n`;
+            md += `- **转化目标**: ${item.goal}\n\n`;
+
+            md += `## 2. 核心策略闭环\n`;
+            md += `### ⚡ 黄金三秒 (Hook)\n`;
+            md += `- **视觉与画面**: ${item.hookVisual}\n`;
+            md += `- **文案原话**: ${item.hookCopy}\n\n`;
+            
+            md += `### 🎯 用户痛点 (Pain Point)\n`;
+            md += `- **痛点场景**: ${item.painScene}\n`;
+            md += `- **触发金句**: ${item.painQuote}\n\n`;
+
+            md += `### 🛡️ 解决方案与核心卖点\n`;
+            md += `- **解法路径**: ${item.solutionPath}\n`;
+            md += `- **卖点包装**: ${item.solutionWrap}\n\n`;
+
+            md += `### 💰 逼单阶段转化方式\n`;
+            md += `- **转化钩子**: ${item.ctaHook}\n`;
+            md += `- **行动指令 (CTA)**: ${item.ctaAction}\n\n`;
+
+            md += `## 3. 视听叙事分镜头时间轴\n`;
+            md += `| 时间戳 | 画面/运镜 | 声音/台词 | 心流意图 |\n`;
+            md += `| :--- | :--- | :--- | :--- |\n`;
+            if (item.timeline && item.timeline.length > 0) {
+                item.timeline.forEach(t => {
+                    md += `| ${t.time} | ${t.visual} | ${t.sound} | ${t.intent} |\n`;
+                });
+            }
+            md += `\n`;
+
+            md += `## 4. 方法论沉淀\n`;
+            md += `- **爆款基因**: ${item.takeawayGene}\n`;
+            md += `- **可复用公式**: ${item.takeawayFormula}\n`;
+
+            const blob = new Blob([md], { type: 'text/markdown;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const dlAnchor = document.createElement('a');
+            dlAnchor.setAttribute("href", url);
+            dlAnchor.setAttribute("download", `${item.title.slice(0, 15)}_复盘报告.md`);
+            document.body.appendChild(dlAnchor);
+            dlAnchor.click();
+            dlAnchor.remove();
+        }
+    </script>
+</body>
+</html>
